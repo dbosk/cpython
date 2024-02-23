@@ -951,6 +951,18 @@ Supported mailbox formats are Maildir, mbox, MH, Babyl, and MMDF.
    | T    | Trashed | Marked for subsequent deletion |
    +------+---------+--------------------------------+
 
+   .. note::
+
+      If you get the message from a :class:`Maildir` object, remember to use
+      its :meth:`~Maildir.__setitem__` method to update it, because changes
+      made with the message methods below will not propagate to the mailbox
+      object's copy of the message. For example::
+
+          one_message = some_mailbox.get_message(key)
+          one_message.set_flags(flags)
+          some_mailbox[key] = one_message
+
+
    :class:`!MaildirMessage` instances offer the following methods:
 
 
