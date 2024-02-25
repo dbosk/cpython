@@ -1726,3 +1726,38 @@ due to malformed messages in the mailbox::
    for box in boxes.itervalues():
        box.close()
 
+In the following example we want to process messages in a Maildir mailbox.
+We want to process new messages matching a certain subject and sender email 
+address. When they are processed we want to mark them as read. ::
+
+  import mailbox
+  import os
+  import re
+  import some_module
+
+  mailbox_path = f"{os.environ['HOME']}/mail"
+  maildir = mailbox.Maildir(mailbox_path, create=False)
+  maildir.lock()
+
+  subject_pattern = re.compile(r"(Re:)?\s*(interesting subject)\s*$", re.IGNORECASE)
+  email_pattern = re.compile(r"(\w+)\\?@\w*\.?foo\.bar")
+
+  for key, msg in maildir.iteritems():
+      if "S" in msg.get_flags():
+          continue
+      if subject_pattern.match(msg["subject"]) is None:
+          continue
+      if email_pattern.search(msg["from"]) is None:
+          continue
+
+      try:
+          if some_module.process_message(msg):
+              msg.set_subdir("cur")
+              msg.add_flag("S")
+              maildir[key] = msg
+      except:
+          continue
+
+  maildir.flush()
+  maildir.unlock()
+  maildir.close()
