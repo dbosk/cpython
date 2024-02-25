@@ -1761,3 +1761,54 @@ address. When they are processed we want to mark them as read. ::
   maildir.flush()
   maildir.unlock()
   maildir.close()
+
+Now we can look at the `some_module.process_message` function. The difficulty 
+working with email messages is their formating: HTML, multipart, text with 
+non-UTF-8 encoding, and so on. ::
+
+  def process_message(msg):
+      """
+      Process a message and return True if the message was processed
+      successfully. (Checks if there is a "hello" in the body of the message.)
+      """
+      body = get_body(msg)
+      if "hello" in body:
+          return True
+      return False
+
+
+  def get_body(msg):
+      """
+      Returns the decoded body of a message. Merges all decoded parts
+      if it is a multipart message.
+      """
+      if not msg.is_multipart():
+          body = trial_error_decode(msg.get_payload(decode=True),
+                                    msg.get_charsets())
+      else:
+          body = ""
+          for part in msg.get_payload():
+              try:
+                  body += trial_error_decode(part, msg.get_charsets())
+                  body += "\n"
+              except:
+                  continue
+
+      return body
+
+
+  def trial_error_decode(payload, charsets):
+      """
+      Trial-and-error decode the payload using the charsets provided. If no
+      charset is found that can decode the payload, raise an exception.
+      """
+      for charset in charsets:
+          try:
+              body = payload.decode(charset)
+          except:
+              continue
+          else:
+              break
+      else:
+          raise Exception("Could not decode body")
+      return body
