@@ -1763,8 +1763,9 @@ address. When they are processed we want to mark them as read. ::
   maildir.close()
 
 Now we can look at the `some_module.process_message` function. The difficulty 
-working with email messages is their formating: HTML, multipart, text with 
-non-UTF-8 encoding, and so on. ::
+working with email messages is their formating: might be multipart, must be 
+decoded, plain text or HTML, and so on. In this simple example we just want to 
+see if the message contains the string "hello". ::
 
   def process_message(msg):
       """
@@ -1780,35 +1781,31 @@ non-UTF-8 encoding, and so on. ::
   def get_body(msg):
       """
       Returns the decoded body of a message. Merges all decoded parts
-      if it is a multipart message.
+      with '\n\n' if it is a multipart message.
       """
+      charsets = msg.get_charsets()
       if not msg.is_multipart():
-          body = trial_error_decode(msg.get_payload(decode=True),
-                                    msg.get_charsets())
+          payloads = [msg.get_payload(decode=True)]
       else:
-          body = ""
-          for part in msg.get_payload():
-              try:
-                  body += trial_error_decode(part, msg.get_charsets())
-                  body += "\n"
-              except:
-                  continue
+          payloads = msg.get_payload()
+
+      body = ""
+      for payload in payloads:
+          if body:
+              body += "\n\n"
+
+          body += trial_error_decode(payload, charsets)
 
       return body
 
 
   def trial_error_decode(payload, charsets):
       """
-      Trial-and-error decode the payload using the charsets provided. If no
-      charset is found that can decode the payload, raise an exception.
+      Tries to decode a payload with different charsets.
       """
       for charset in charsets:
           try:
-              body = payload.decode(charset)
-          except:
+              return payload.decode(charset)
+          except Exception:
               continue
-          else:
-              break
-      else:
-          raise Exception("Could not decode body")
-      return body
+      raise Exception("Could not decode payload.")
